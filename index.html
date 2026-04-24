@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Game</title>
+
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial;
+            padding: 30px;
+            background: #111;
+            color: #fff;
+        }
+
+        button {
+            padding: 12px 18px;
+            margin: 8px;
+        }
+
+        #playBtn { background: green; color: white; }
+        #startTrialBtn { background: orange; }
+        #enterKeyBtn { background: #007bff; color: white; }
+        #buyKeyBtn { background: #25D366; color: white; }
+    </style>
+</head>
+
+<body>
+
+<h2>🎮 My Game</h2>
+
+<p id="statusText">Loading...</p>
+
+<button id="startTrialBtn" onclick="startTrial()">Start 14 Days Trial</button>
+
+<button id="playBtn" onclick="openGame()" disabled>Play Game</button>
+
+<button id="enterKeyBtn" onclick="openSubscribe()">Enter Passkey</button>
+
+<button id="buyKeyBtn" onclick="buyPasskey()">Buy Passkey</button>
+
+<script src="cordova.js"></script>
+
+<script>
+const TRIAL_DAYS = 14;
+
+let deviceId = "";
+
+// INIT (Cordova + browser fallback)
+document.addEventListener("deviceready", init);
+document.addEventListener("DOMContentLoaded", init);
+
+function init() {
+    deviceId = (window.device && device.uuid) ? device.uuid : "WEB_TEST_DEVICE";
+    checkStatus();
+}
+
+// -------------------- FINGERPRINT HELPERS --------------------
+
+function getStoredDevice() {
+    return localStorage.getItem("deviceFingerprint");
+}
+
+function saveDeviceFingerprint() {
+    localStorage.setItem("deviceFingerprint", deviceId);
+}
+
+// -------------------- RESET UI --------------------
+
+function resetUI() {
+    document.getElementById("playBtn").disabled = true;
+}
+
+// -------------------- MAIN CHECK --------------------
+
+function checkStatus() {
+
+    resetUI();
+
+    let installDate = localStorage.getItem("installDate");
+    let activated = localStorage.getItem("activated");
+    let trialUsed = localStorage.getItem("trialUsed");
+    let savedDevice = getStoredDevice();
+
+    // Save fingerprint first time
+    if (!savedDevice) {
+        saveDeviceFingerprint();
+        savedDevice = deviceId;
+    }
+
+    // DEVICE MISMATCH (extra protection)
+    if (savedDevice !== deviceId && activated !== btoa("true_2026")) {
+        localStorage.setItem("trialUsed", "true");
+    }
+
+    // ACTIVATED USER (FOREVER ACCESS)
+    if (activated === btoa("true_2026")) {
+
+        document.getElementById("statusText").innerText =
+            "Activated Version (Device Locked) ✅";
+
+        document.getElementById("playBtn").disabled = false;
+
+        hideButtons();
+        return;
+    }
+
+    // TRIAL ALREADY USED
+    if (trialUsed === "true") {
+        document.getElementById("statusText").innerText =
+            "Trial expired. Please buy passkey.";
+
+        document.getElementById("startTrialBtn").style.display = "none";
+        return;
+    }
+
+    // NO TRIAL YET
+    if (!installDate) {
+        document.getElementById("statusText").innerText =
+            "Start 14-day trial or buy passkey";
+        return;
+    }
+
+    // TRIAL CHECK
+    const now = new Date().getTime();
+    const diffDays = Math.floor((now - installDate) / (1000 * 60 * 60 * 24));
+
+    const daysLeft = TRIAL_DAYS - diffDays;
+
+    if (daysLeft > 0) {
+
+        document.getElementById("statusText").innerText =
+            "Trial active: " + daysLeft + " day(s) remaining";
+
+        document.getElementById("playBtn").disabled = false;
+
+    } else {
+
+        localStorage.setItem("trialUsed", "true");
+        window.location.replace("subscriber.html");
+    }
+}
+
+// -------------------- START TRIAL --------------------
+
+function startTrial() {
+
+    if (localStorage.getItem("trialUsed") === "true") {
+        alert("Trial already used on this device");
+        return;
+    }
+
+    localStorage.setItem("installDate", new Date().getTime());
+    saveDeviceFingerprint();
+
+    alert("Trial started!");
+    checkStatus();
+}
+
+// -------------------- NAVIGATION --------------------
+
+function openGame() {
+    window.location.href = "ludopickergame.html";
+}
+
+function openSubscribe() {
+    window.location.href = "subscriber.html";
+}
+
+function buyPasskey() {
+    window.location.href = "subscriber.html";
+}
+
+// -------------------- UI CONTROL --------------------
+
+function hideButtons() {
+    document.getElementById("startTrialBtn").style.display = "none";
+    document.getElementById("enterKeyBtn").style.display = "none";
+    document.getElementById("buyKeyBtn").style.display = "none";
+}
+
+// -------------------- BACK BUTTON BLOCK --------------------
+
+history.pushState(null, null, location.href);
+window.onpopstate = function () {
+    history.pushState(null, null, location.href);
+};
+</script>
+
+</body>
+</html>

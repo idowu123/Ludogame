@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Activate Game</title>
+</head>
+<body style="background:#111;color:white;text-align:center;padding:30px;">
+
+<h2>Trial Expired</h2>
+<p>Activate to continue</p>
+
+<p id="deviceBox"></p>
+<button onclick="copyId()">Copy Device ID</button>
+
+<br><br>
+
+<button id="buyBtn">Buy via WhatsApp</button>
+
+<br><br>
+
+<input type="text" id="keyInput" placeholder="Enter activation key">
+<br>
+<button onclick="activate()">Activate</button>
+
+<script src="cordova.js"></script>
+
+<script>
+let deviceId = "";
+
+document.addEventListener("deviceready", function () {
+
+    deviceId = device.uuid;
+
+    document.getElementById("deviceBox").innerText =
+        "Device ID: " + deviceId;
+
+    const message =
+        "Hello, I want to activate the game.\n" +
+        "Device ID: " + deviceId;
+
+    const link =
+        "https://wa.me/2347010067689?text=" +
+        encodeURIComponent(message);
+
+    document.getElementById("buyBtn").onclick = function () {
+        window.open(link, "_system");
+    };
+
+});
+
+function copyId() {
+    navigator.clipboard.writeText(deviceId);
+    alert("Copied");
+}
+
+function getSecret() {
+    return "S3c" + "ReT@" + "2026" + "!#";
+}
+
+async function generateKey(deviceId) {
+    const secret = getSecret();
+
+    const encoder = new TextEncoder();
+    const data = encoder.encode(deviceId + secret);
+
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+
+    return hashHex.substring(0, 16).toUpperCase();
+}
+
+async function activate() {
+
+    const userKey = document.getElementById("keyInput").value.trim();
+
+    if (!userKey) {
+        alert("Enter key");
+        return;
+    }
+
+    const correctKey = await generateKey(deviceId);
+
+    if (userKey === correctKey) {
+        localStorage.setItem("activated", btoa("true_2026"));
+        alert("Activated");
+
+        window.location.href = "index.html";
+    } else {
+        alert("Invalid key");
+    }
+}
+</script>
+
+</body>
+</html>
