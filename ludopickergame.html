@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Ludo Picker — Tournament (Enhanced, Fixed)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1, shrink-to-fit=no" />
+  <style>
+    :root{
+      --bg1:#e8f6ff; --bg2:#f7f7f7;
+      --card-radius:12px; --gap:16px;
+    }
+    /* THEMES (applied to body classes) */
+    body.theme-classic { --bg1:#e8f6ff; --bg2:#f7f7f7; --text:#123; }
+    body.theme-dark    { --bg1:#0f1724; --bg2:#111827; --text:#ffffff; }
+    body.theme-arcade  { --bg1:#0f1724; --bg2:#1b2a47; --text:#f7f0ff; }
+
+    body {
+      background: linear-gradient(135deg,var(--bg1),var(--bg2));
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--text, #123); padding:20px; margin:0; text-align:center;
+    }
+    h1{margin:0 0 6px;color:var(--text)}
+    p.lead{margin:6px 0 16px;color:rgba(0,0,0,0.55)}
+
+    .row {display:flex; gap:5px; justify-content:center; flex-wrap:wrap; align-items:center;}
+    .panel {background:rgba(255,255,255,0.9); padding:12px; border-radius:10px; display:inline-block;}
+    input[type="text"], input[type="number"], select {
+      padding:8px 10px; border-radius:8px; border:1px solid #cfd8dc; min-width:120px;
+    }
+    label {font-size:13px; color:#234; margin-right:6px}
+    .btn {padding:10px 14px; border-radius:8px; border:none; cursor:pointer; font-weight:700; color:white; background:#2e86de}
+    .btn.green{background:#27ae60}
+    .btn.alt{background:#5d6d79}
+    .small{font-size:13px;color:rgb(25, 10, 233)}
+
+    .players {display:flex; gap:var(--gap); justify-content:center; flex-wrap:wrap; margin-top:12px}
+    .player-card {width:40px; min-height:30px; border-radius:var(--card-radius); color:white; box-shadow:0 8px 20px rgba(20,30,40,0.12); position:relative; padding:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; transition:transform .18s,opacity .3s;}
+    .player-name{font-size:11px;font-weight:400;margin-bottom:6px;text-align:center}
+    .player-score{font-size:22px;font-weight:800}
+    .player-meta{font-size:12px;opacity:0.95;margin-top:6px}
+    .emoji{position:absolute; right:10px; bottom:8px; font-size:28px; display:none}
+    .player-card.active{animation:blink 1s infinite; transform:translateY(-6px)}
+    @keyframes blink{50%{opacity:0.6}}
+    .eliminated{opacity:0.28; filter:grayscale(0.35); transform:none !important}
+
+    .board {display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:18px}
+    .board button{border:none; background:none; cursor:pointer; padding:0; transition:transform .12s}
+    .board button:hover{transform:scale(1.06)}
+    .board img{width:50px; height:55; display:block; border-radius:6px}
+
+    .message{margin-top:12px; font-weight:700; color:#e01d0f; min-height:26px}
+    .controls{margin-top:14px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap}
+    .lb {margin-top:14px; display:none; justify-content:center}
+
+    /* Floating music button */
+    #musicToggle {
+      position: fixed;
+      bottom: 20px; right: 20px;
+      width: 50px; height: 50px;
+      border:none; border-radius:50%;
+      background:#8e44ad; color:white; font-size:24px; cursor:pointer;
+      box-shadow:0 4px 10px rgba(0,0,0,.2); transition:transform .2s;
+      z-index:2000;
+    }
+    #musicToggle:hover{ transform:scale(1.1); }
+
+    /* Volume slider */
+    #volumeControl {
+      position: fixed;
+      bottom: 80px; right: 20px;
+      width: 160px;
+      display: none;
+      background:white; padding:8px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,.2);
+      z-index:2000;
+    }
+
+    #specialMsg {
+      position:fixed;top:34%;left:50%;transform:translate(-50%,-50%);
+      font-size:36px;font-weight:900;display:none;z-index:1500;text-align:center;
+    }
+    .zoomIn {animation: zoomIn 1s ease forwards;}
+    @keyframes zoomIn{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
+
+    .results-panel{
+      background:white;border-radius:10px;padding:14px;
+      box-shadow:0 6px 18px rgba(0,0,0,.1);
+      margin-top:16px;display:inline-block;text-align:left;
+    }
+
+    /* About overlay */
+    #aboutOverlay {
+      position: fixed; top:0; left:0; right:0; bottom:0;
+      background:rgba(0,0,0,0.6);
+      display:none; justify-content:center; align-items:center; z-index:3000;
+    }
+    #aboutBox {
+      background:white; border-radius:12px; padding:20px;
+      max-width:480px; text-align:left; color:#123;
+      box-shadow:0 8px 20px rgba(0,0,0,0.3);
+    }
+    #aboutBox h2{margin-top:0; color:#143e4c}
+    #aboutBox button{margin-top:12px;}
+
+    /* Confetti */
+    .confetti {
+      position: fixed; pointer-events: none; top: -10%; left: 0; width: 100%; height: 0; z-index: 4000;
+    }
+    .confetti .piece {
+      position: absolute; width: 10px; height: 16px; opacity: 0.9; transform: rotate(15deg);
+      animation: fall 2.4s linear forwards;
+    }
+    @keyframes fall {
+      0% {transform: translateY(-10vh) rotate(0); opacity:1}
+      100% {transform: translateY(110vh) rotate(720deg); opacity:0.9}
+    }
+
+    /* small color-picker style next to name inputs */
+    .name-with-color { display:inline-flex; gap:6px; align-items:center; }
+    .colorPick { width:18px; height:18px; border-radius:6px; border:1px solid #ccc; cursor:pointer; }
+  </style>
+</head>
+<body class="theme-classic">
+  <h1 id="headingOne">🎲 Ludo Picker — Tournament</h1>
+  <p class="lead" id="lead">Multi-stage tournament: players qualify by reaching ≥70 → elimination rounds (8→6→4→2). Final two race to 50. You can play vs CPU or with colleagues.</p>
+
+  <!-- MODE SELECT -->
+  <div class="panel row"  id="panelRow" style="margin-bottom:12px;" >
+    <label for="modeSelect">Mode</label>
+    <select id="modeSelect">
+      <option value="colleagues">Play with colleagues</option>
+      <option value="vsComputer">Play vs Computer</option>
+    </select>
+
+    <div id="vsComputerControls" style="display:none; align-items:center;">
+      <label for="youName">Your name</label>
+      <input id="youName" type="text" placeholder="You (optional)"/>
+      <label for="cpuCountMain">CPU count</label>
+      <input id="cpuCountMain" type="number" min="0" max="7" value="1" style="width:68px"/>
+    </div>
+  </div>
+
+  <!-- COLLEAGUES SETUP (default) -->
+  <div id="colleaguesBlock" class="panel" style="margin-bottom:12px;">
+    <div class="row" style="align-items:center">
+      <div class="name-with-color"><input id="p1Name" type="text" placeholder="Player 1 name"/><input id="c1" class="colorPick" type="color" value="#e74c3c" title="Choose color"/></div>
+      <div class="name-with-color"><input id="p2Name" type="text" placeholder="Player 2 name"/><input id="c2" class="colorPick" type="color" value="#3498db" /></div>
+      <div class="name-with-color"><input id="p3Name" type="text" placeholder="Player 3 name"/><input id="c3" class="colorPick" type="color" value="#27ae60" /></div>
+      <div class="name-with-color"><input id="p4Name" type="text" placeholder="Player 4 name"/><input id="c4" class="colorPick" type="color" value="#f39c12" /></div>
+      <button id="addFourBtn" class="btn alt">Add 4 players</button>
+    </div>
+
+    <div id="extraControls" class="row" style="margin-top:8px; display:none;">
+      <label for="extraType">Extras are</label>
+      <select id="extraType"><option value="human">Humans</option><option value="cpu">CPUs</option></select>
+      <label for="extraCount">Count</label>
+      <select id="extraCount"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option></select>
+      <button id="applyExtrasBtn" class="btn">Apply Extras</button>
+      <button id="applyCPUsBtn" class="btn alt">Auto-fill CPUs</button>
+    </div>
+
+    <div id="extraInputs" class="row" style="display:none; margin-top:8px;">
+      <div class="name-with-color"><input id="p5Name" type="text" placeholder="Player 5 name"/><input id="c5" class="colorPick" type="color" value="#9b59b6"/></div>
+      <div class="name-with-color"><input id="p6Name" type="text" placeholder="Player 6 name"/><input id="c6" class="colorPick" type="color" value="#1abc9c"/></div>
+      <div class="name-with-color"><input id="p7Name" type="text" placeholder="Player 7 name"/><input id="c7" class="colorPick" type="color" value="#e67e22"/></div>
+      <div class="name-with-color"><input id="p8Name" type="text" placeholder="Player 8 name"/><input id="c8" class="colorPick" type="color" value="#2980b9"/></div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-bottom:10px;">
+    <button id="startBtn" class="btn green">Start Game</button>
+    <button id="restartBtn" class="btn">🔄 Restart</button>
+  </div>
+
+  <!-- GAME AREA -->
+  <div id="gameArea" style="display:none;">
+    <div id="turnDisplay" style="font-weight:800; margin-bottom:8px"></div>
+
+    <div class="players" id="playersContainer">
+      <!-- 8 player cards predefined (colors will be updated dynamically) -->
+      <div id="card0" class="player-card"><div id="name0" class="player-name">Player 1</div><div id="score0" class="player-score">0</div><div id="meta0" class="player-meta">Human</div><div id="emoji0" class="emoji">😮</div></div>
+      <div id="card1" class="player-card"><div id="name1" class="player-name">Player 2</div><div id="score1" class="player-score">0</div><div id="meta1" class="player-meta">Human</div><div id="emoji1" class="emoji">😮</div></div>
+      <div id="card2" class="player-card"><div id="name2" class="player-name">Player 3</div><div id="score2" class="player-score">0</div><div id="meta2" class="player-meta">Human</div><div id="emoji2" class="emoji">😮</div></div>
+      <div id="card3" class="player-card"><div id="name3" class="player-name">Player 4</div><div id="score3" class="player-score">0</div><div id="meta3" class="player-meta">Human</div><div id="emoji3" class="emoji">😮</div></div>
+      <div id="card4" class="player-card" style="display:none"><div id="name4" class="player-name">Player 5</div><div id="score4" class="player-score">0</div><div id="meta4" class="player-meta">Human</div><div id="emoji4" class="emoji">😮</div></div>
+      <div id="card5" class="player-card" style="display:none"><div id="name5" class="player-name">Player 6</div><div id="score5" class="player-score">0</div><div id="meta5" class="player-meta">Human</div><div id="emoji5" class="emoji">😮</div></div>
+      <div id="card6" class="player-card" style="display:none"><div id="name6" class="player-name">Player 7</div><div id="score6" class="player-score">0</div><div id="meta6" class="player-meta">Human</div><div id="emoji6" class="emoji">😮</div></div>
+      <div id="card7" class="player-card" style="display:none"><div id="name7" class="player-name">Player 8</div><div id="score7" class="player-score">0</div><div id="meta7" class="player-meta">Human</div><div id="emoji7" class="emoji">😮</div></div>
+    </div>
+
+    <!-- pick buttons -->
+    <div class="board" aria-hidden="false">
+      <button onclick="playerActionPick(1)"><img src="ludo 1.png" onerror="this.style.display='none'"/></button>
+      <button onclick="playerActionPick(2)"><img src="ludo 2.png" onerror="this.style.display='none'"/></button>
+      <button onclick="playerActionPick(3)"><img src="ludo 3.png" onerror="this.style.display='none'"/></button>
+      <button onclick="playerActionPick(5)"><img src="ludo 5.png" onerror="this.style.display='none'"/></button>
+      <button onclick="playerActionPick(7)"><img src="ludo 7.png" onerror="this.style.display='none'"/></button>
+      <button onclick="playerActionPick(8)"><img src="ludo 8.png" onerror="this.style.display='none'"/></button>
+      <button onclick="playerActionPick(10)"><img src="ludo 10.png" onerror="this.style.display='none'"/></button>
+    </div>
+
+    <div class="message" id="message"></div>
+    <div class="message" id="commentary" style="font-weight:600;color:#333; font-size:14px; min-height:20px"></div>
+
+    <div class="controls" style="margin-top:10px;">
+      <div class="small">Stage: <span id="stageLabel">—</span></div>
+      <div class="small">Active players: <span id="activeCount">0</span></div>
+      <div><button class="btn" onclick="toggleLeaderboard()">Show leaderboard</button></div>
+      <div style="display:flex;gap:8px;align-items:center"><label class="small">Theme</label>
+        <select id="themeSelect">
+          <option value="classic">Classic</option>
+          <option value="dark">Dark</option>
+          <option value="arcade">Arcade</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="lb" id="leaderboard" style="display:none; margin-top:12px;">
+      <div style="background:white;border-radius:8px;padding:10px 12px; box-shadow:0 6px 18px rgba(10,20,30,0.08); min-width:220px; text-align:left;">
+        <div style="font-weight:800">Leaderboard</div>
+        <div id="leaderList" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer style="margin-top:18px;font-size:13px;color:#345">
+    Tip: 7–10 picks may randomly grant a replay. CPUs auto-play; human players click a pick when it's their turn.
+    <br>
+    <button class="btn alt" onclick="showAbout()">About Game</button>
+  </footer>
+
+  <!-- Special replay/elimination message -->
+  <div id="specialMsg"></div>
+
+  <!-- Confetti container -->
+  <div class="confetti" id="confettiContainer"></div>
+
+  <!-- About overlay -->
+  <div id="aboutOverlay">
+    <div id="aboutBox">
+      <h2>About Ludo Picker</h2>
+      <p>
+        🎮 <strong>Ludo Picker Tournament</strong> — multi-stage elimination game with CPUs and friends.
+        Power-ups, penalties, dynamic emojis, themed backgrounds, and spectator commentary make it fun.
+      </p>
+      <p>
+        Developer: <strong>Solomon Idowu Michael <img src="idowu.png" width="50px"> <br> <a href="mailto:solomonidowumichael@gmail.com">Send Mail</a> </strong><br>
+        Rules summary: points thresholds and elimination follow the number-of-player rules (2,3,4,5,6,7,8).
+      </p>
+      <button class="btn green" onclick="closeAbout()">Close</button>
+    </div>
+  </div>
+
+  <!-- Sounds (Google public library) -->
+  <audio id="beep" src="mixkit-winning-a-coin-video-game-2069.wav"></audio>
+  <audio id="replaySound" src="mixkit-game-experience-level-increased-2062.wav"></audio>
+  <audio id="startSound" src="mixkit-game-level-music-689.wav"></audio>
+  <audio id="elimSound" src="mixkit-player-losing-or-failing-2042.wav"></audio>
+  <audio id="endSound" src="mixkit-player-losing-or-failing-2042.wav"></audio>
+  <audio id="bonusSound" src="mixkit-completion-of-a-level-2063.wav"></audio>
+  <audio id="trapSound" src="mixkit-player-losing-or-failing-2042.wav"></audio>
+  <audio id="bgMusic" src="" loop></audio>
+
+  <button id="musicToggle" onclick="toggleMusic()">🔊</button>
+  <div id="volumeControl">
+    <label style="font-size:12px;">Music Volume</label><br/>
+    <input type="range" id="volSlider" min="0" max="100" value="24"/>
+    <div style="display:flex;gap:8px;margin-top:6px;justify-content:space-between;">
+      <button class="btn alt" onclick="muteMusic()">Mute</button>
+      <button class="btn alt" onclick="unmuteMusic()">Unmute</button>
+    </div>
+  </div>
+
+<script>
+/* ========================= Utilities & Setup ========================= */
+const $ = id => document.getElementById(id);
+
+function playSound(id){
+  try {
+    const el = $(id);
+    if (!el) return;
+    el.currentTime = 0;
+    el.play();
+  } catch(e){}
+}
+function showSpecialMessage(txt, cssClass="zoomIn", color="#e74c3c"){
+  const el = $("specialMsg");
+  el.textContent = txt;
+  el.style.color = color;
+  el.className = cssClass;
+  el.style.display = "block";
+  setTimeout(()=>{ el.style.display = "none"; }, 2200);
+}
+function showMessage(txt){ const el = $("message"); if(el) el.textContent = txt; }
+
+/* ========================= Game State ========================= */
+let players = [];      // names
+let metas = [];        // 'Human' | 'CPU'
+let scores = [];
+let lastRoundZero = [];
+let lastRoundGain = []; // for dynamic emoji threshold
+let colors = [];       // hex color per player
+let activePlayers = [];
+let currentPlayer = 0;
+let stage = 1;
+let stageTarget = 100;
+const qualifyThreshold = 70;
+const finalTarget = 50;
+let started = false;
+let turnLocked = false;
+const replayChance = 1/3;
+const powerChance = 0.15; // 15% power-up / penalty chance
+let autoPlayDelay = 700;
+const LB_KEY = 'ludo_tournament_leaderboard_v2';
+
+/* TAUNTS & cheers for flavor */
+const taunts = ["Nice move!", "Ouch, unlucky.", "🔥 What a comeback!", "Close one!", "Keep going!"];
+const cheers = ["Woohoo!", "Amazing!", "Legendary!", "You rock!", "Nice!"];
+
+/* ========================= Wire UI Controls ========================= */
+/* mode toggle */
+$("modeSelect").addEventListener('change', e => {
+  const mode = e.target.value;
+  if (mode === 'vsComputer') {
+    $('vsComputerControls').style.display = 'flex';
+    $('colleaguesBlock').style.display = 'none';
+  } else {
+    $('vsComputerControls').style.display = 'none';
+    $('colleaguesBlock').style.display = 'block';
+  }
+});
+
+/* add extra inputs */
+$("addFourBtn").addEventListener('click', ()=>{
+  $('extraInputs').style.display = 'flex';
+  $('extraControls').style.display = 'flex';
+  $('addFourBtn').style.display = 'none';
+});
+
+/* apply extras (cpu/human) */
+$("applyExtrasBtn").addEventListener('click', ()=>{
+  const type = $('extraType').value;
+  const count = parseInt($('extraCount').value,10) || 0;
+  if (count <= 0) { showMessage('Select 1–4 extras to add.'); return; }
+  const fields = ['p5Name','p6Name','p7Name','p8Name'];
+  $('extraInputs').style.display = 'flex';
+  if (type === 'cpu') {
+    for (let i=0;i<count;i++){
+      const el = $(fields[i]);
+      if (el) el.value = `CPU ${5+i}`;
+      // also auto assign colors
+      const c = $('c'+(5+i));
+      if (c) c.value = randomColor();
+    }
+    showMessage(`${count} CPU(s) placed into extra slots.`);
+  } else {
+    for (let i=0;i<count;i++){
+      const el = $(fields[i]);
+      if (el) el.value = '';
+    }
+    showMessage(`${count} extra human slot(s) ready — fill names.`);
+  }
+});
+
+/* autofill CPUs */
+$("applyCPUsBtn").addEventListener('click', ()=>{
+  const fields = ['p1Name','p2Name','p3Name','p4Name','p5Name','p6Name','p7Name','p8Name'];
+  for (let i=0;i<8;i++){
+    const el = $(fields[i]);
+    if (!el) continue;
+    const extraVisible = $('extraInputs').style.display !== 'none';
+    if (i >= 4 && !extraVisible) continue;
+    if (el.value.trim() === '') el.value = `CPU ${i+1}`;
+  }
+  showMessage('Filled empty slots with CPU names.');
+});
+
+/* start / restart */
+$("startBtn").addEventListener('click', startGame);
+$("restartBtn").addEventListener('click', ()=> location.reload());
+
+/* theme switch: set body class (works with body.theme-*) */
+$("themeSelect").addEventListener('change', e=>{
+  const t = e.target.value;
+  if (t === 'classic') document.body.className = 'theme-classic';
+  else if (t === 'dark') document.body.className = 'theme-dark';
+  else document.body.className = 'theme-arcade';
+});
+
+/* volume controls */
+$("musicToggle").addEventListener('click', ()=>{
+  const vc = $("volumeControl");
+  vc.style.display = vc.style.display === 'block' ? 'none' : 'block';
+});
+$("volSlider").addEventListener('input', e=>{
+  const bg = $("bgMusic");
+  if (bg) bg.volume = e.target.value/100;
+});
+function muteMusic(){ const bg=$('bgMusic'); if(bg) bg.muted=true; }
+function unmuteMusic(){ const bg=$('bgMusic'); if(bg) bg.muted=false; }
+
+/* simpler control wrapper for music toggle */
+let musicOn = false;
+function toggleMusic(){
+  const bg = $('bgMusic');
+  if (!bg) return;
+  if (!musicOn) {
+    try { bg.volume = $('volSlider') ? $('volSlider').value/100 : 0.24; bg.play(); } catch(e){}
+    musicOn = true;
+    $('musicToggle').textContent = '🔊';
+  } else {
+    bg.pause();
+    musicOn = false;
+    $('musicToggle').textContent = '🔈';
+  }
+}
+
+/* about overlay */
+function showAbout(){ $("aboutOverlay").style.display = 'flex'; }
+function closeAbout(){ $("aboutOverlay").style.display = 'none'; }
+
+/* ========================= Start Game ========================= */
+function startGame(){
+  document.getElementById('colleaguesBlock').style.display="none";
+  document.getElementById('headingOne').style.display="none";
+  document.getElementById('lead').style.display="none";
+  document.getElementById('panelRow').style.display="none";
+  const mode = $('modeSelect').value;
+  players = []; metas = []; colors = [];
+  // helper to read color picker; fallback if missing
+  function pickColor(i, fallback){
+    const c = $('c'+(i+1));
+    return c ? c.value : fallback; 
+  }
+
+  if (mode === 'vsComputer') {
+    const you = $('youName').value.trim() || 'You';
+    let cpuCount = parseInt($('cpuCountMain').value,10);
+    if (isNaN(cpuCount) || cpuCount < 0) cpuCount = 1;
+    if (cpuCount > 7) cpuCount = 7;
+    players.push(you); metas.push('Human'); colors.push(pickColor(0,'#e74c3c'));
+    for (let i=0;i<cpuCount && players.length < 8;i++){
+      players.push(`CPU ${i+1}`); metas.push('CPU'); colors.push(randomColor());
+    }
+  } else {
+    const inputs = ['p1Name','p2Name','p3Name','p4Name','p5Name','p6Name','p7Name','p8Name'];
+    const extraVisible = $('extraInputs').style.display !== 'none';
+    for (let i=0;i<8;i++){
+      if (i >= 4 && !extraVisible) continue;
+      const el = $(inputs[i]);
+      const val = el ? el.value.trim() : '';
+      if (val === '') continue;
+      players.push(val);
+      metas.push(val.toLowerCase().startsWith('cpu') ? 'CPU' : 'Human');
+      colors.push( ($('c'+(i+1)) ? $('c'+(i+1)).value : randomColor()) );
+    }
+    if (players.length < 2) { showMessage('Please enter at least two player names or add CPUs.'); return; }
+  }
+
+  // init arrays/state
+  scores = players.map(()=>0);
+  lastRoundZero = players.map(()=>false);
+  lastRoundGain = players.map(()=>0);
+  activePlayers = players.map((_,i)=>i);
+  stage = 1; stageTarget = 100; started = true; turnLocked = false;
+
+  // show area & set cards
+  $("gameArea").style.display = 'block';
+  updateCardsVisibility();
+
+  playSound('startSound');
+  try { const bg = $('bgMusic'); if (bg && musicOn) bg.play(); } catch(e){}
+
+  currentPlayer = activePlayers[Math.floor(Math.random()*activePlayers.length)];
+  showMessage(`${players[currentPlayer]} starts!`);
+  updateDisplay();
+
+  if (metas[currentPlayer] === 'CPU') scheduleCpuPlay();
+}
+
+/* ========================= Helpers for colors & random ========================= */
+function randomColor(){
+  const palette = ['#e74c3c','#3498db','#27ae60','#f39c12','#9b59b6','#1abc9c','#e67e22','#2980b9'];
+  return palette[Math.floor(Math.random()*palette.length)];
+}
+
+/* ========================= Update Cards: colors and labels ========================= */
+function updateCardsVisibility(){
+  for (let i=0;i<8;i++){
+    const card = $('card'+i);
+    if (!card) continue;
+    if (i < players.length) {
+      card.style.display = 'flex';
+      $('name'+i).textContent = players[i];
+      $('meta'+i).textContent = metas[i];
+      $('score'+i).textContent = scores[i];
+      // apply color as gradient
+      const c = colors[i] || randomColor();
+      card.style.background = `linear-gradient(120deg, ${c}, ${shadeColor(c,-12)})`;
+    } else {
+      card.style.display = 'none';
+    }
+    card.classList.remove('eliminated');
+  }
+}
+
+/* helper to shade hex color */
+function shadeColor(hex, percent) {
+  // hex e.g. #rrggbb
+  try {
+    const f=parseInt(hex.slice(1),16),t=percent<0?0:255,p= Math.abs(percent)/100;
+    const R=f>>16,G=f>>8&0x00FF,B=f&0x0000FF;
+    const newR = Math.round((t-R)*p)+R;
+    const newG = Math.round((t-G)*p)+G;
+    const newB = Math.round((t-B)*p)+B;
+    return `rgb(${newR},${newG},${newB})`;
+  } catch(e){
+    return hex;
+  }
+}
+
+/* ========================= Player action (click pick) ========================= */
+function playerActionPick(pickValue){
+  if (!started) { showMessage('Please start the game first.'); return; }
+  if (turnLocked) return;
+  const cp = currentPlayer;
+  if (metas[cp] === 'CPU') { return; } // ignore clicks on CPU turn
+  playRound(cp, pickValue);
+}
+
+/* ========================= Core round logic w/ power-ups ========================= */
+function playRound(playerIndex, picked){
+  if (!activePlayers.includes(playerIndex)) return;
+  turnLocked = true;
+
+  // base random 1..10
+  let roundScore = Math.floor(Math.random()*10) + 1;
+  // high pick penalty -3
+  if (picked >=7 && picked <=10) roundScore = Math.max(0, roundScore - 3);
+
+  // POWER-UP / PENALTY chance
+  let powerText = '';
+  if (Math.random() < powerChance) {
+    if (Math.random() < 0.5) {
+      roundScore += 10;
+      powerText = ' BONUS +10 ';
+      playSound('bonusSound');
+    } else {
+      roundScore = Math.max(0, roundScore - 5);
+      powerText = ' TRAP -5 ';
+      playSound('trapSound');
+    }
+  }
+
+  lastRoundZero[playerIndex] = (roundScore === 0);
+  lastRoundGain[playerIndex] = roundScore;
+  scores[playerIndex] += roundScore;
+
+  const flavor = (roundScore >= 15) ? cheers[Math.floor(Math.random()*cheers.length)] : taunts[Math.floor(Math.random()*taunts.length)];
+  showMessage(`${players[playerIndex]} picked ${picked} and got ${roundScore} pts.${powerText} ${flavor}`);
+  maybeCommentary(playerIndex);
+
+  playSound('beep');
+  updateDisplay();
+
+  // Replay logic for 7-10
+  if (picked >=7 && picked <=10) {
+    const grantReplay = Math.random() < replayChance;
+    if (grantReplay) {
+      playSound('replaySound');
+      showSpecialMessage(`${players[playerIndex]} got a REPLAY!`, 'zoomIn', '#27ae60');
+      if (metas[playerIndex] === 'CPU') {
+        setTimeout(()=> {
+          if (started && activePlayers.includes(playerIndex) && currentPlayer === playerIndex) cpuDoPick(playerIndex);
+        }, autoPlayDelay);
+        return;
+      } else {
+        setTimeout(()=> { turnLocked = false; updateDisplay(); }, 180);
+        return;
+      }
+    }
+  }
+
+  // check tournament progression & eliminations with extended rules
+  extendedProgressionChecks();
+
+  // check final winner when 2 left (or if stage==2)
+  if (activePlayers.length === 2 && stage === 2) {
+    const winner = activePlayers.find(i => scores[i] >= finalTarget);
+    if (winner !== undefined) {
+      playSound('endSound');
+      showSpecialMessage(`🏆 Winner: ${players[winner]} 🏆`, 'zoomIn', '#f39c12');
+      confettiBurst();
+      recordWinner(players[winner]);
+      displayFinalResults();
+      activePlayers = [winner];
+      updateDisplay();
+      turnLocked = false;
+      return;
+    }
+  }
+
+  // rotate to next
+  nextTurn();
+
+  // if next is CPU schedule
+  if (metas[currentPlayer] === 'CPU' && activePlayers.includes(currentPlayer)) scheduleCpuPlay();
+  else turnLocked = false;
+}
+
+/* ========================= CPU helpers ========================= */
+function scheduleCpuPlay(){
+  setTimeout(()=>{
+    if (!started) return;
+    const cp = currentPlayer;
+    if (metas[cp] !== 'CPU' || !activePlayers.includes(cp)) return;
+    cpuDoPick(cp);
+  }, autoPlayDelay);
+}
+function cpuDoPick(cpuIndex){
+  if (!activePlayers.includes(cpuIndex)) { turnLocked = false; return; }
+  const picks = [1,2,3,5,7,8,10];
+  const pick = picks[Math.floor(Math.random()*picks.length)];
+  playRound(cpuIndex, pick);
+}
+
+/* ========================= Extended progression checks (2,3,5,7,4,6,8) ========================= */
+function extendedProgressionChecks(){
+  const count = activePlayers.length;
+
+  // 2 players -> final to 50
+  if (count === 2) {
+    stage = 2; stageTarget = 50;
+    return;
+  }
+
+  // 3 players: first two to 100 advance -> eliminate last; then finalists reset to 0 and final target 50
+  if (count === 3) {
+    const reached = activePlayers.filter(i=>scores[i] >= 100);
+    if (reached.length === 2) {
+      const eliminated = activePlayers.filter(i=>!reached.includes(i));
+      playSound('elimSound');
+      showSpecialMessage(`Eliminated: ${eliminated.map(i=>players[i]).join(' & ')}`, 'zoomIn', '#c0392b');
+      eliminatePlayers(eliminated);
+      activePlayers = reached.slice();
+      activePlayers.forEach(i=>{ scores[i]=0; lastRoundZero[i]=false; });
+      stage = 2; stageTarget = 50;
+      showMessage(`Final 2 ready — race to ${stageTarget}`);
+      currentPlayer = activePlayers[0];
+      updateDisplay();
+      return;
+    }
+  }
+
+  // 4 players
+  if (count === 4) {
+    const reached = activePlayers.filter(i => scores[i] >= qualifyThreshold);
+    const below = activePlayers.filter(i => scores[i] < qualifyThreshold);
+    if (reached.length === 2 && below.length === 2) {
+      playSound('elimSound');
+      showSpecialMessage(`Eliminated: ${below.map(i=>players[i]).join(' & ')}`, 'zoomIn', '#c0392b');
+      eliminatePlayers(below);
+      const finalists = reached.slice();
+      finalists.forEach(i => { scores[i]=0; lastRoundZero[i]=false; $('card'+i).classList.remove('eliminated'); });
+      activePlayers = finalists.slice();
+      stage = 2; stageTarget = finalTarget;
+      showMessage(`Finalists: ${players[activePlayers[0]]} & ${players[activePlayers[1]]}. Final target ${stageTarget}.`);
+      currentPlayer = activePlayers[0];
+      updateDisplay();
+      return;
+    }
+  }
+
+  // 5 players: first 3 to 100 advance
+  if (count === 5) {
+    const reached = activePlayers.filter(i => scores[i] >= 100);
+    if (reached.length === 3) {
+      const eliminated = activePlayers.filter(i=>!reached.includes(i));
+      playSound('elimSound');
+      showSpecialMessage(`Eliminated: ${eliminated.map(i=>players[i]).join(' & ')}`, 'zoomIn', '#c0392b');
+      eliminatePlayers(eliminated);
+      activePlayers = reached.slice();
+      activePlayers.forEach(i=>scores[i]=0);
+      showMessage(`3 survivors continue to 100`);
+      return;
+    }
+  }
+
+  // 6 players
+  if (count === 6) {
+    const reached = activePlayers.filter(i => scores[i] >= qualifyThreshold);
+    const below = activePlayers.filter(i => scores[i] < qualifyThreshold);
+    if (reached.length === (count - 2) && below.length === 2) {
+      playSound('elimSound');
+      showSpecialMessage(`Eliminated: ${below.map(i=>players[i]).join(' & ')}`, 'zoomIn', '#c0392b');
+      eliminatePlayers(below);
+      const survivors = reached.slice();
+      survivors.forEach(i => { scores[i] = 0; lastRoundZero[i] = false; $('card'+i).classList.remove('eliminated'); });
+      activePlayers = survivors.slice();
+      stage = 1; stageTarget = 100;
+      showMessage(`Eliminated: ${below.map(i=>players[i]).join(' & ')}. Survivors reset and continue (target ${stageTarget}).`);
+      currentPlayer = activePlayers[0];
+      updateDisplay();
+      return;
+    }
+  }
+
+  // 7 players: first 5 to 100 advance
+  if (count === 7) {
+    const reached = activePlayers.filter(i => scores[i] >= 100);
+    if (reached.length === 5) {
+      const eliminated = activePlayers.filter(i=>!reached.includes(i));
+      playSound('elimSound');
+      showSpecialMessage(`Eliminated: ${eliminated.map(i=>players[i]).join(' & ')}`, 'zoomIn', '#c0392b');
+      eliminatePlayers(eliminated);
+      activePlayers = reached.slice();
+      activePlayers.forEach(i=>scores[i]=0);
+      showMessage(`5 survivors continue to 100`);
+      return;
+    }
+  }
+
+  // 8 players
+  if (count === 8) {
+    const reached = activePlayers.filter(i => scores[i] >= qualifyThreshold);
+    const below = activePlayers.filter(i => scores[i] < qualifyThreshold);
+    if (reached.length === (count - 2) && below.length === 2) {
+      playSound('elimSound');
+      showSpecialMessage(`Eliminated: ${below.map(i=>players[i]).join(' & ')}`, 'zoomIn', '#c0392b');
+      eliminatePlayers(below);
+      const survivors = reached.slice();
+      survivors.forEach(i => { scores[i] = 0; lastRoundZero[i]=false; $('card'+i).classList.remove('eliminated'); });
+      activePlayers = survivors.slice();
+      stage = 1; stageTarget = 100;
+      showMessage(`Eliminated: ${below.map(i=>players[i]).join(' & ')}. Survivors reset and continue (target ${stageTarget}).`);
+      currentPlayer = activePlayers[0];
+      updateDisplay();
+      return;
+    }
+  }
+}
+
+/* ========================= eliminatePlayers ========================= */
+function eliminatePlayers(indexes){
+  indexes.forEach(i=>{
+    const card = $('card'+i);
+    if (card) {
+      card.classList.add('eliminated');
+      const meta = $('meta'+i);
+      if (meta) meta.textContent = `Eliminated (${scores[i]} pts)`;
+      const em = $('emoji'+i);
+      if (em) { em.textContent = '😢'; em.style.display='block'; }
+    }
+  });
+  activePlayers = activePlayers.filter(idx => !indexes.includes(idx));
+}
+
+/* ========================= nextTurn ========================= */
+function nextTurn(){
+  if (activePlayers.length === 0) return;
+  const idx = activePlayers.indexOf(currentPlayer);
+  if (idx === -1) currentPlayer = activePlayers[0];
+  else currentPlayer = activePlayers[(idx+1) % activePlayers.length];
+  updateDisplay();
+}
+
+/* ========================= UI updates ========================= */
+function updateDisplay(){
+  // ensure arrays lengths are safe
+  for (let i=0;i<players.length;i++){
+    const nameEl = $('name'+i);
+    const scoreEl = $('score'+i);
+    const metaEl = $('meta'+i);
+    if (nameEl) nameEl.textContent = players[i] || '';
+    if (scoreEl) scoreEl.textContent = scores[i] || 0;
+    if (metaEl) metaEl.textContent = metas[i] || '';
+    const card = $('card'+i);
+    if (!card) continue;
+    const c = colors[i] || randomColor();
+    card.style.background = `linear-gradient(120deg, ${c}, ${shadeColor(c,-12)})`;
+    // emoji rules
+    let em = '';
+    if (!activePlayers.includes(i) && metas[i]) {
+      em = $('emoji'+i).textContent || '😢';
+    } else if (lastRoundZero[i]) em = '😮';
+    else if (lastRoundGain[i] >= 20) em = '🥳';
+    else {
+      const maxScore = Math.max(...scores,0);
+      if (scores[i] === maxScore && maxScore > 0 && activePlayers.includes(i)) em = '🔥';
+    }
+    const emojiEl = $('emoji'+i);
+    if (emojiEl) {
+      emojiEl.textContent = em;
+      emojiEl.style.display = em ? 'block' : 'none';
+    }
+    if (activePlayers.includes(i)) card.classList.remove('eliminated'); else card.classList.add('eliminated');
+    card.classList.toggle('active', activePlayers.includes(i) && currentPlayer === i);
+  }
+
+  $('stageLabel').textContent = (stage === 1 ? `Stage 1 (target ${stageTarget})` : `Final (target ${stageTarget})`);
+  $('activeCount').textContent = activePlayers.length;
+  if (activePlayers.length === 1) $('turnDisplay').textContent = `Winner: ${players[activePlayers[0]]}`;
+  else $('turnDisplay').textContent = `${players[currentPlayer]}'s Turn — ${metas[currentPlayer] || 'Human'}`;
+}
+
+/* ========================= Spectator commentary ========================= */
+function maybeCommentary(lastPlayerIndex){
+  const humanCount = metas.filter(m=>m==='Human').length;
+  if (humanCount === 1) {
+    if (!activePlayers.length) return;
+    const leaderIndex = activePlayers.reduce((best,i)=> scores[i] > (scores[best]||0) ? i : best, activePlayers[0]);
+    if (leaderIndex === lastPlayerIndex) {
+      $("commentary").textContent = `${players[lastPlayerIndex]} takes the lead!`;
+    } else {
+      $("commentary").textContent = `${players[lastPlayerIndex]} scored — ${taunts[Math.floor(Math.random()*taunts.length)]}`;
+    }
+    setTimeout(()=>{ $("commentary").textContent = ''; }, 2500);
+  } else {
+    $("commentary").textContent = cheers[Math.floor(Math.random()*cheers.length)];
+    setTimeout(()=>{ $("commentary").textContent = ''; }, 1800);
+  }
+}
+
+/* ========================= confetti ========================= */
+function confettiBurst(){
+  const container = $('confettiContainer');
+  container.innerHTML = '';
+  const cols = ['#f94144','#f3722c','#f9c74f','#90be6d','#577590','#43aa8b','#7209b7'];
+  for (let i=0;i<80;i++){
+    const el = document.createElement('div');
+    el.className = 'piece';
+    el.style.left = Math.random()*100 + '%';
+    el.style.background = cols[Math.floor(Math.random()*cols.length)];
+    el.style.animationDuration = (2 + Math.random()*1.4) + 's';
+    el.style.opacity = 0.9;
+    container.appendChild(el);
+  }
+  setTimeout(()=>{ container.innerHTML = ''; }, 2600);
+}
+
+/* ========================= Final Results & Leaderboard ========================= */
+function displayFinalResults(){
+  const existing = document.querySelector('.results-panel');
+  if (existing) existing.remove();
+  const resultsDiv = document.createElement('div');
+  resultsDiv.className = 'results-panel';
+  resultsDiv.innerHTML = `<h3>Final Scores</h3><ul>${players.map((p,i)=>`<li>${p}: ${scores[i]} pts</li>`).join('')}</ul>`;
+  $('gameArea').appendChild(resultsDiv);
+}
+
+function recordWinner(name){
+  try {
+    const raw = localStorage.getItem(LB_KEY) || '{}';
+    const map = JSON.parse(raw);
+    map[name] = (map[name] || 0) + 1;
+    localStorage.setItem(LB_KEY, JSON.stringify(map));
+  } catch(e){ console.warn(e); }
+}
+function toggleLeaderboard(){
+  const lb = $('leaderboard');
+  if (lb.style.display === 'flex') { lb.style.display = 'none'; return; }
+  const raw = localStorage.getItem(LB_KEY) || '{}';
+  let map = {};
+  try { map = JSON.parse(raw); } catch(e){ map = {}; }
+  const arr = Object.keys(map).map(k=>({name:k,wins:map[k]})).sort((a,b)=>b.wins-a.wins);
+  const list = $('leaderList'); list.innerHTML = '';
+  if (arr.length === 0) list.textContent = 'No winners yet';
+  else arr.forEach((r,i)=>{
+    const title = r.wins >= 5 ? 'Legend 🏆' : (r.wins >=3 ? 'Pro 🔵' : 'Beginner 🟢');
+    const d = document.createElement('div');
+    d.innerHTML = `<strong>${i+1}. ${r.name}</strong> — ${r.wins} win(s) • ${title}`;
+    list.appendChild(d);
+  });
+  lb.style.display = 'flex';
+}
+
+/* ========================= Helper functions re-used earlier ========================= */
+function shadeColor(hex, percent) {
+  try {
+    const f=parseInt(hex.slice(1),16),t=percent<0?0:255,p= Math.abs(percent)/100;
+    const R=f>>16,G=f>>8&0x00FF,B=f&0x0000FF;
+    const newR = Math.round((t-R)*p)+R;
+    const newG = Math.round((t-G)*p)+G;
+    const newB = Math.round((t-B)*p)+B;
+    return `rgb(${newR},${newG},${newB})`;
+  } catch(e){ return hex; }
+}
+
+/* expose debug */
+window._tournament = {
+  state: ()=>({players,metas,scores,activePlayers,currentPlayer,stage,stageTarget,colors}),
+  setAutoDelay: d => autoPlayDelay = +d
+};
+</script>
+</body>
+</html>
