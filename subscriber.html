@@ -1,62 +1,136 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Activate Game</title>
+    <title>Subscribe</title>
+
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial;
+            padding: 30px;
+            background: #111;
+            color: #fff;
+        }
+
+        button {
+            padding: 12px 18px;
+            margin: 10px;
+            font-size: 16px;
+        }
+
+        #buyBtn {
+            background: #25D366;
+            color: white;
+        }
+
+        #activateBtn {
+            background: #007bff;
+            color: white;
+        }
+
+        input {
+            padding: 10px;
+            width: 250px;
+            margin-top: 10px;
+        }
+
+        #deviceBox {
+            margin: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+    </style>
 </head>
-<body style="background:#111;color:white;text-align:center;padding:30px;">
 
-<h2>Trial Expired</h2>
-<p>Activate to continue</p>
+<body>
 
-<p id="deviceBox"></p>
-<button onclick="copyId()">Copy Device ID</button>
+<h2>🔐 Activate Game</h2>
 
-<br><br>
+<p>Buy passkey via WhatsApp</p>
+
+<div id="deviceBox">Loading device ID...</div>
 
 <button id="buyBtn">Buy via WhatsApp</button>
 
 <br><br>
 
 <input type="text" id="keyInput" placeholder="Enter activation key">
+
 <br>
-<button onclick="activate()">Activate</button>
+
+<button id="activateBtn" onclick="activate()">Activate</button>
 
 <script src="cordova.js"></script>
 
 <script>
 let deviceId = "";
 
-document.addEventListener("deviceready", function () {
+// ---------------- INIT ----------------
 
-    deviceId = device.uuid;
+function initApp() {
 
+    // Detect device (Cordova or browser)
+    if (window.device && device.uuid) {
+        deviceId = device.uuid;
+    } else {
+        let saved = localStorage.getItem("webDeviceId");
+
+        if (!saved) {
+            saved = "WEB-" + Math.random().toString(36).substring(2, 10);
+            localStorage.setItem("webDeviceId", saved);
+        }
+
+        deviceId = saved;
+    }
+
+    // Show device ID
     document.getElementById("deviceBox").innerText =
-        "Device ID: " + deviceId;
+        "Your Device ID: " + deviceId;
+
+    setupWhatsApp();
+}
+
+// Run everywhere
+document.addEventListener("deviceready", initApp);
+document.addEventListener("DOMContentLoaded", initApp);
+
+
+// ---------------- WHATSAPP ----------------
+
+function setupWhatsApp() {
 
     const message =
         "Hello, I want to activate the game.\n" +
-        "Device ID: " + deviceId;
+        "Device ID: " + deviceId + "\n" +
+        "Price: ₦2000";
+
+    const phone = "2347010067689"; // 🔴 CHANGE TO YOUR NUMBER
 
     const link =
-        "https://wa.me/2347010067689?text=" +
+        "https://wa.me/" + phone + "?text=" +
         encodeURIComponent(message);
 
     document.getElementById("buyBtn").onclick = function () {
-        window.open(link, "_system");
+
+        if (window.cordova) {
+            window.open(link, "_system"); // APK
+        } else {
+            window.open(link, "_blank"); // GitHub/browser
+        }
     };
-
-});
-
-function copyId() {
-    navigator.clipboard.writeText(deviceId);
-    alert("Copied");
 }
 
+
+// ---------------- KEY SYSTEM ----------------
+
+// Secret (same as generator)
 function getSecret() {
     return "S3c" + "ReT@" + "2026" + "!#";
 }
 
+// Generate correct key
 async function generateKey(deviceId) {
+
     const secret = getSecret();
 
     const encoder = new TextEncoder();
@@ -65,29 +139,38 @@ async function generateKey(deviceId) {
     const hashBuffer = await crypto.subtle.digest("SHA-256", data);
 
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    const hashHex = hashArray.map(b =>
+        b.toString(16).padStart(2, "0")
+    ).join("");
 
     return hashHex.substring(0, 16).toUpperCase();
 }
 
+
+// ---------------- ACTIVATE ----------------
+
 async function activate() {
 
-    const userKey = document.getElementById("keyInput").value.trim();
+    const userKey =
+        document.getElementById("keyInput").value.trim();
 
     if (!userKey) {
-        alert("Enter key");
+        alert("Enter your activation key");
         return;
     }
 
     const correctKey = await generateKey(deviceId);
 
     if (userKey === correctKey) {
+
         localStorage.setItem("activated", btoa("true_2026"));
-        alert("Activated");
+
+        alert("Activation successful!");
 
         window.location.href = "index.html";
+
     } else {
-        alert("Invalid key");
+        alert("Invalid key!");
     }
 }
 </script>
